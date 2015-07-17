@@ -10,37 +10,21 @@ import akka.stream.scaladsl._
 import akka.util.ByteString
 import org.json4s.JsonAST.JString
 import org.json4s.jackson.JsonMethods._
-import scopt.OptionParser
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.io.{Source => ioSource}
 import scala.util.{Failure, Success, Try}
 
-object App {
+object StreamApp extends App {
 
   case class WikidataElement(id: String, sites: Map[String, String])
 
-  case class Config(input: File = null, langs: Seq[String] = Seq.empty)
+  case class Config(input: File = new File("/home/gvolpe/Documents/wikidata-20150713.json.gz"),
+                    langs: Seq[String] = List("en", "es", "de"))
 
-  def main(args: Array[String]) {
-    sys.exit(execute(args, task))
-  }
+  val start = now()
 
-  def execute(args: Array[String], task: (Config => Int)): Int = {
-    val parser = new OptionParser[Config]("wikidata") {
-      opt[File]('i', "input") action { (i, c) =>
-        c.copy(input = i) } required() text "Wikidata JSON dump"
-      opt[Seq[String]]('l', "languages") action { (l, c) =>
-        c.copy(langs = l) } required() valueName "<language1>,<language2>,..." text "Languages to take into account"
-    }
-
-    parser.parse(args, Config()) match {
-      case Some(config) =>
-        task(config)
-
-      case None => 1
-    }
-  }
+  task(Config())
 
   def task(config: Config): Int = {
     implicit val system = ActorSystem("wikidata-poc")
@@ -123,6 +107,11 @@ object App {
         | Ratios: ${t.toDouble / (t + f)} / ${f.toDouble / (t + f)}
                   """.stripMargin
     println(message)
+
+    val time = (now() - start) / 1000
+    println(s"Process completed in $time seconds.")
   }
+
+  def now(): Long = System.currentTimeMillis()
 
 }
